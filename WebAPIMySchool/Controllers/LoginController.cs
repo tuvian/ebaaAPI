@@ -273,5 +273,36 @@ namespace WebAPIMySchool.Controllers
             }
         }
 
+        public APIStatus getGoogleRegID(string loginid, string regid)
+        {
+            APIStatus api_status = new APIStatus();
+            try
+            {
+                DAL objDAL = new DAL();
+                string returnValue = string.Empty;
+                string sqlQuery = string.Empty;
+
+                string updateMessage = "Success";
+
+                int login_id = 0;
+                int.TryParse(loginid, out login_id);
+
+                if (login_id == 0 || regid == null )
+                    updateMessage = "Please pass valid from login ID/ regID";
+                else
+                {
+                    sqlQuery = "UPDATE login SET google_regid = '" + regid + "' WHERE id = " + login_id;
+                    objDAL.ExecuteNonQuery(sqlQuery);
+                }
+                api_status.api_status = updateMessage;
+                return api_status;
+            }
+            catch (Exception ex)
+            {
+                api_status.api_status = ex.Message;
+                return api_status;
+            }
+        }
+
     }
 }

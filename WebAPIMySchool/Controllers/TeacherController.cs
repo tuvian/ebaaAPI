@@ -14,13 +14,6 @@ namespace WebAPIMySchool.Controllers
         List<Teacher> teachers = new List<Teacher>();
         TeacherHeader teacherlist = new TeacherHeader();
 
-        ////public TeacherHeader GetAllTeachers()
-        ////{
-        ////    GetTeachers();
-        ////    teacherlist.teacherdetails = teachers;
-        ////    return teacherlist;
-        ////}
-
         public TeacherHeader GetAllTeachers(string school_id)
         {
             if (teachers.Count() > 0)

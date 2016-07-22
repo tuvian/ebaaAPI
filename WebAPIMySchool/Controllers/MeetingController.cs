@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Web.Http;
 using WebAPIMySchool.Models;
@@ -476,12 +478,125 @@ namespace WebAPIMySchool.Controllers
                     objDAL.ExecuteNonQuery(sqlQuery);
                 }
                 api_status.api_status = updateMessage;
+
+                if (api_status.api_status == "Success")
+                {
+                    sendMeetingNotification(scid, fid, ftype, fdate, tdate, sub, msg, smembers, tmembers, sclass, tclass);
+                }
+
                 return api_status;
             }
             catch (Exception ex)
             {
                 api_status.api_status = ex.Message;
                 return api_status;
+            }
+        }
+
+        private void sendMeetingNotification(string scid, string fid, string ftype, string fdate, string tdate, string sub, string msg, string smembers, string tmembers, string sclass, string tclass)
+        {
+            DAL objDAL = new DAL();
+            DataTable resultTable = new DataTable();
+            DataTable APItable = new DataTable();
+            DataTable fnameTable = new DataTable();
+
+            smembers = smembers == "" ? "0" : smembers;
+            tmembers = tmembers == "" ? "0" : tmembers;
+            sclass = sclass == "" ? "0" : sclass;
+            tclass = tclass == "" ? "0" : tclass;
+
+            string sqlQuery = "SELECT s.email,s.class_id,l.google_regid from student s INNER JOIN class c ON s.class_id = c.id INNER JOIN login l ON l.user_id = s.id AND l.type = 4 WHERE s.class_id IN (" + sclass + ") UNION  " +
+                " SELECT t.email,t.class_id,l.google_regid FROM teacher t INNER JOIN class c ON t.class_id = c.id INNER JOIN login l ON l.user_id = t.id AND l.type = 3 WHERE t.class_id IN (" + tclass + ") UNION " +
+                " SELECT t.email,t.class_id,l.google_regid FROM teacher t INNER JOIN login l ON l.user_id = t.id AND l.type = 3 WHERE t.id IN (" + tmembers + ") UNION " +
+                " SELECT s.email,s.class_id,l.google_regid from student s INNER JOIN login l ON l.user_id = s.id AND l.type = 4 WHERE s.id IN (" + smembers + ") ";
+            resultTable = objDAL.ExecuteDataTable(sqlQuery);
+
+            string googleSenderID = "";
+            string googleAppID = "";
+
+            string sqlQueryAPIKey = "SELECT google_sender_id, google_app_id FROM school WHERE id = " + scid;
+            APItable = objDAL.ExecuteDataTable(sqlQueryAPIKey);
+            if (APItable.Rows.Count > 0)
+            {
+                googleSenderID = APItable.Rows[0]["google_sender_id"].ToString();
+                googleAppID = APItable.Rows[0]["google_app_id"].ToString();
+            }
+
+            string sqlQueryFname;
+            string fname = "";
+            if (ftype == "3")
+            {
+                sqlQueryFname = "SELECT t.name FROM teacher t WHERE id = " + fid;
+                fnameTable = objDAL.ExecuteDataTable(sqlQueryFname);
+                if (fnameTable.Rows.Count > 0)
+                    fname = fnameTable.Rows[0]["name"].ToString();
+            }
+            else if (ftype == "4")
+            {
+                sqlQueryFname = "SELECT CONCAT(first_name, ' ' , middle_name, ' ' , family_name) as name  FROM student WHERE id = " + fid;
+                fnameTable = objDAL.ExecuteDataTable(sqlQueryFname);
+                if (fnameTable.Rows.Count > 0)
+                    fname = fnameTable.Rows[0]["name"].ToString();
+            }
+            else if (ftype == "2")
+                fname = "School Admin";
+            else if (ftype == "1")
+                fname = "Super Admin";
+            else
+                fname = "";
+
+            for (int i = 0; i < resultTable.Rows.Count; i++)
+            {
+                string regid = resultTable.Rows[i]["google_regid"].ToString();
+                if (regid != null && regid != "" && googleSenderID != "" && googleAppID != "")
+                    sendPushNot(fname, fdate, tdate, sub, msg, regid, googleSenderID, googleAppID);
+            }
+        }
+
+        private void sendPushNot(string fname, string fdate, string tdate, string sub, string msg, string regid, string senderID, string googleAPPID)
+        {
+            try
+            {
+                string GoogleAppID = googleAPPID;
+                var SENDER_ID = senderID;
+                string devider = ":RBAIJSDUR:";
+                var value = "MT" + devider + System.DateTime.Now + devider + fname + devider + sub + devider + fdate + devider + tdate + devider + msg;
+                WebRequest tRequest;
+                tRequest = WebRequest.Create("https://android.googleapis.com/gcm/send");
+                tRequest.Method = "post";
+                tRequest.ContentType = "application/x-www-form-urlencoded;charset=UTF-8";
+                tRequest.Headers.Add(string.Format("Authorization: key={0}", GoogleAppID));
+
+                tRequest.Headers.Add(string.Format("Sender: id={0}", SENDER_ID));
+
+                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + value + "&data.time=" +
+                System.DateTime.Now.ToString() + "&registration_id=" + regid + "";
+                Console.WriteLine(postData);
+                Byte[] byteArray = Encoding.UTF8.GetBytes(postData);
+                tRequest.ContentLength = byteArray.Length;
+
+                Stream dataStream = tRequest.GetRequestStream();
+                dataStream.Write(byteArray, 0, byteArray.Length);
+                dataStream.Close();
+
+                WebResponse tResponse = tRequest.GetResponse();
+
+                dataStream = tResponse.GetResponseStream();
+
+                StreamReader tReader = new StreamReader(dataStream);
+
+                String sResponseFromServer = tReader.ReadToEnd();
+
+                tReader.Close();
+                dataStream.Close();
+                tResponse.Close();
+                //return sResponseFromServer;
+            }
+            catch (Exception ex)
+            {
+                //ScriptManager.RegisterStartupScript(Page, this.GetType(), "alert", string.Format("alert('{0}');",
+                //        "Error :" + ex.Message), true);
+                //return "Error" + ex.Message;
             }
         }
 
@@ -504,7 +619,7 @@ namespace WebAPIMySchool.Controllers
                 int.TryParse(scid, out school_id);
 
                 if (meeting_id == 0 || from_id == 0 || school_id == 0)
-                    updateMessage = "Please pass valid from meeting ID/ School ID/ fromid";
+                    updateMessage = "Please pass valid meeting ID/ School ID/ fromid";
                 else
                 {
                     sqlQuery = "INSERT INTO meeting_trn(meeting_id, school_id, from_id, from_type, status, comments, date) VALUES(" + meetid +
@@ -512,6 +627,9 @@ namespace WebAPIMySchool.Controllers
                     objDAL.ExecuteNonQuery(sqlQuery);
                 }
                 api_status.api_status = updateMessage;
+
+                if (updateMessage == "Success")
+                    sendMeetingUpdateNotification(scid, meetid, fid, ftype, status, comments);
                 return api_status;
             }
             catch (Exception ex)
@@ -519,6 +637,116 @@ namespace WebAPIMySchool.Controllers
                 api_status.api_status = ex.Message;
                 return api_status;
             }
+        }
+
+        private void sendMeetingUpdateNotification(string scid, string meetid, string fid, string ftype, string status, string comments)
+        {
+            DAL objDAL = new DAL();
+            DataTable resultTable = new DataTable();
+            DataTable APItable = new DataTable();
+            DataTable fnameTable = new DataTable();
+            string sqlQuery = "";
+            if (ftype == "3")
+                sqlQuery = "SELECT t.email,t.name,l.google_regid,m.subject FROM teacher t INNER JOIN meeting m ON t.id = m.from_id AND m.from_type = 3 INNER JOIN login l ON l.user_id = t.id AND l.type = 3 WHERE m.id = " + meetid;
+            else if (ftype == "4")
+                sqlQuery = "SELECT s.email,CONCAT(s.first_name, ' ' , s.middle_name, ' ' , s.family_name) as name,l.google_regid,m.subject FROM student s INNER JOIN meeting m ON s.id = m.from_id AND m.from_type = 4 INNER JOIN login l ON l.user_id = t.id AND l.type = 4 WHERE m.id = " + meetid;
+            
+            resultTable = objDAL.ExecuteDataTable(sqlQuery);
+
+            string googleSenderID = "";
+            string googleAppID = "";
+
+            string sqlQueryAPIKey = "SELECT google_sender_id, google_app_id FROM school WHERE id = " + scid;
+            APItable = objDAL.ExecuteDataTable(sqlQueryAPIKey);
+            if (APItable.Rows.Count > 0)
+            {
+                googleSenderID = APItable.Rows[0]["google_sender_id"].ToString();
+                googleAppID = APItable.Rows[0]["google_app_id"].ToString();
+            }
+
+
+            string sqlQueryFname;
+            string fname = "";
+            if (ftype == "3")
+            {
+                sqlQueryFname = "SELECT t.name FROM teacher t WHERE id = " + fid;
+                fnameTable = objDAL.ExecuteDataTable(sqlQueryFname);
+                if (fnameTable.Rows.Count > 0)
+                    fname = fnameTable.Rows[0]["name"].ToString();
+            }
+            else if (ftype == "4")
+            {
+                sqlQueryFname = "SELECT CONCAT(first_name, ' ' , middle_name, ' ' , family_name) as name  FROM student WHERE id = " + fid;
+                fnameTable = objDAL.ExecuteDataTable(sqlQueryFname);
+                if (fnameTable.Rows.Count > 0)
+                    fname = fnameTable.Rows[0]["name"].ToString();
+            }
+            else if (ftype == "2")
+                fname = "School Admin";
+            else if (ftype == "1")
+                fname = "Super Admin";
+            else
+                fname = "";
+
+            for (int i = 0; i < resultTable.Rows.Count; i++)
+            {
+                string regid = resultTable.Rows[i]["google_regid"].ToString();
+                string sub = resultTable.Rows[i]["subject"].ToString();
+                if (regid != null && regid != "" && googleSenderID != "" && googleAppID != "")
+                    sendPushNotForMU(fname, sub, status, comments, regid, googleSenderID, googleAppID);
+            }
+        }
+
+        private void sendPushNotForMU(string fromName, string sub, string status, string comments, string regid, string googleSenderID, string googleAppID)
+        {
+            try
+            {
+                string GoogleAppID = googleAppID;
+                var SENDER_ID = googleSenderID;
+                string devider = ":RBAIJSDUR:";
+                var value = "MT" + devider + System.DateTime.Now + devider + fromName + devider + sub + devider + status + devider + comments;
+                WebRequest tRequest;
+                tRequest = WebRequest.Create("https://android.googleapis.com/gcm/send");
+                tRequest.Method = "post";
+                tRequest.ContentType = "application/x-www-form-urlencoded;charset=UTF-8";
+                tRequest.Headers.Add(string.Format("Authorization: key={0}", GoogleAppID));
+
+                tRequest.Headers.Add(string.Format("Sender: id={0}", SENDER_ID));
+
+                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + value + "&data.time=" +
+                System.DateTime.Now.ToString() + "&registration_id=" + regid + "";
+                Console.WriteLine(postData);
+                Byte[] byteArray = Encoding.UTF8.GetBytes(postData);
+                tRequest.ContentLength = byteArray.Length;
+
+                Stream dataStream = tRequest.GetRequestStream();
+                dataStream.Write(byteArray, 0, byteArray.Length);
+                dataStream.Close();
+
+                WebResponse tResponse = tRequest.GetResponse();
+
+                dataStream = tResponse.GetResponseStream();
+
+                StreamReader tReader = new StreamReader(dataStream);
+
+                String sResponseFromServer = tReader.ReadToEnd();
+
+                tReader.Close();
+                dataStream.Close();
+                tResponse.Close();
+                //return sResponseFromServer;
+            }
+            catch (Exception ex)
+            {
+                //ScriptManager.RegisterStartupScript(Page, this.GetType(), "alert", string.Format("alert('{0}');",
+                //        "Error :" + ex.Message), true);
+                //return "Error" + ex.Message;
+            }
+        }
+
+        private void testPost()
+        {
+
         }
 
         //public MeetingHeader getMymeeting(string scid, string fid, string ftype)

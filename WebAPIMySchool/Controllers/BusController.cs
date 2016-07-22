@@ -99,6 +99,27 @@ namespace WebAPIMySchool.Controllers
             }
             return updateMessage;
         }
+
+
+        [AcceptVerbs("POST")]
+        [ActionName("ProfilePhotoTest")]
+        [System.Web.Http.HttpPost]
+        public APIStatus ProfilePhotoTest(Bus sp)
+        {
+            APIStatus ap = new APIStatus();
+            string base64Status = "Valid Image";
+            try
+            {
+                byte[] imageBytes = Convert.FromBase64String(sp.latitude);                
+            }
+            catch
+            {
+                base64Status = "Invalid Image";
+            }
+
+            ap.api_status = "ID = " + sp.ID + " schoolid = " + sp.school_id + " Image Status = " + base64Status;
+            return ap;
+        }
     }
 
 }

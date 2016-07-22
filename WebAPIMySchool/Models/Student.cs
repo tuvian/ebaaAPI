@@ -41,6 +41,14 @@ namespace WebAPIMySchool.Models
         public string driver_id { get; set; }
     }
 
+    public class StudentProfile
+    {
+        public string id { get; set; }
+        public string school_id { get; set; }
+        public string imagestring { get; set; }
+        public string filename { get; set; }
+    }
+
     public class StudentHeader
     {
         public IList<Student> studentdetails { get; set; }
