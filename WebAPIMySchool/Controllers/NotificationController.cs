@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using WebAPIMySchool.Models;
 
@@ -85,9 +86,8 @@ namespace WebAPIMySchool.Controllers
 
                 string GoogleAppID = googleAppID;
                 var SENDER_ID = googleSenderID;
-                //string devider = ":RBAIJSDUR:";
-                //var value = System.DateTime.Now + devider + fname + devider + sub + devider + file + devider + msg;
-                var value = msg;
+                string devider = ":RBAIJSDUR:";
+                var value = msg + devider + System.DateTime.Now;
                 WebRequest tRequest;
                 tRequest = WebRequest.Create("https://android.googleapis.com/gcm/send");
                 tRequest.Method = "post";
@@ -96,7 +96,7 @@ namespace WebAPIMySchool.Controllers
 
                 tRequest.Headers.Add(string.Format("Sender: id={0}", SENDER_ID));
 
-                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + value + "&data.time=" +
+                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + HttpUtility.UrlEncode(value) + "&data.time=" +
                 System.DateTime.Now.ToString() + "&registration_id=" + regid + "";
                 Console.WriteLine(postData);
                 Byte[] byteArray = Encoding.UTF8.GetBytes(postData);

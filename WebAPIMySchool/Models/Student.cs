@@ -39,6 +39,7 @@ namespace WebAPIMySchool.Models
         public string bus_id { get; set; }
         public string bus_number { get; set; }
         public string driver_id { get; set; }
+        public string login_id { get; set; }
     }
 
     public class StudentProfile

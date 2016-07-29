@@ -56,9 +56,9 @@ namespace WebAPIMySchool.Controllers
             DataTable dt = new DataTable();
             string sqlQuery = "SELECT t.id,t.code,t.name,t.mobile,t.email,t.present_address,t.permenant_address,t.status,t.qualification, t.image_path, " +
                     "dep.name as department, des.id as designation_id,des.name as designation, dep.id as department_id,t.nationality, t.school_id, " +
-                    "cls.std as class_std, cls.division as class_division, cls.id as class_id " +
+                    "cls.std as class_std, cls.division as class_division, cls.id as class_id, l.id as login_id " +
                     "FROM teacher t INNER JOIN department dep ON t.department_id = dep.id INNER JOIN designation des ON des.id = t.designation_id " +
-                    "INNER JOIN class cls ON cls.id = t.class_id ";
+                    "INNER JOIN class cls ON cls.id = t.class_id LEFT JOIN login l ON t.id = l.user_id AND l.type = 3 ";
   
             dt = objDAL.ExecuteDataTable(sqlQuery);
 
@@ -84,7 +84,7 @@ namespace WebAPIMySchool.Controllers
                     class_id = dt.Rows[i]["class_id"].ToString(),
                     class_division = dt.Rows[i]["class_division"].ToString(),
                     class_std = dt.Rows[i]["class_std"].ToString(),
-
+                    login_id = dt.Rows[i]["login_id"].ToString()
                 });
             }
         }

@@ -28,7 +28,7 @@ namespace WebAPIMySchool.Models
         public string class_id { get; set; }
         public string class_std { get; set; }
         public string class_division { get; set; }
-
+        public string login_id { get; set; }
     }
 
     public class TeacherHeader

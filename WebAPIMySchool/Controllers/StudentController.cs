@@ -111,10 +111,10 @@ namespace WebAPIMySchool.Controllers
             DAL objDAL = new DAL();
             DataTable dt = new DataTable();
 
-            string sqlQuery = "SELECT t.id,t.school_id,t.student_id,t.first_name,t.mobile,t.email,t.present_address,t.permenant_address,t.father_name, t.mother_name, " +
+            string sqlQuery = "SELECT t.id,l.id as login_id,t.school_id,t.student_id,t.first_name,t.mobile,t.email,t.present_address,t.permenant_address,t.father_name, t.mother_name, " +
                     "t.contact_mobile, t.contact_email,t.gender, t.wilayath,t.waynumber,t.nationality,t.middle_name,t.family_name,t.gender,t.image_path,t.status, " +
                     "cls.id as class_id, cls.std as class_std, cls.division as class_division,t.latitude, t.longitude, t.accuracy " +
-                    " FROM  student t INNER JOIN class cls ON t.class_id = cls.ID ";
+                    " FROM  student t INNER JOIN class cls ON t.class_id = cls.ID LEFT JOIN login l ON t.id = l.user_id AND l.type = 4";
             dt = objDAL.ExecuteDataTable(sqlQuery);
 
             for (int i = 0; i < dt.Rows.Count; i++)
@@ -147,6 +147,7 @@ namespace WebAPIMySchool.Controllers
                     latitude = dt.Rows[i]["latitude"].ToString(),
                     longitude = dt.Rows[i]["longitude"].ToString(),
                     accuracy = dt.Rows[i]["accuracy"].ToString(),
+                    login_id = dt.Rows[i]["login_id"].ToString(),
                 });
             }
         }
