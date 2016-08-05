@@ -276,11 +276,11 @@ namespace WebAPIMySchool.Controllers
             sqlQuery += "WHERE (from_id = " + fid + " AND from_type = '" + ftype + "') ";
 
             if (ftype == "3")
-                sqlQuery += " OR (tmembers like '%," + fid + "' or tmembers like '%," + fid + ",%' OR tmembers like '" + fid + ",%' OR tmembers like '%" + fid + "%') " +
-                    " OR (tclass like '%," + class_id + "' or tclass like '%," + class_id + ",%' OR tclass like '" + class_id + ",%' OR tclass like '%" + class_id + "%')";
+                sqlQuery += " OR (tmembers = '0' OR tmembers like '%," + fid + "' or tmembers like '%," + fid + ",%' OR tmembers like '" + fid + ",%' OR tmembers like '%" + fid + "%') " +
+                    " OR (tclass = '0' OR tclass like '%," + class_id + "' or tclass like '%," + class_id + ",%' OR tclass like '" + class_id + ",%' OR tclass like '%" + class_id + "%')";
             else if (ftype == "4")
-                sqlQuery += " OR (smembers like '%," + fid + "' or smembers like '%," + fid + ",%' OR smembers like '" + fid + ",%' OR smembers like '%" + fid + "%') " +
-                    " OR (sclass like '%," + class_id + "' or sclass like '%," + class_id + ",%' OR sclass like '" + class_id + ",%' OR sclass like '%" + class_id + "%')";
+                sqlQuery += " OR (smembers = '0' OR smembers like '%," + fid + "' or smembers like '%," + fid + ",%' OR smembers like '" + fid + ",%' OR smembers like '%" + fid + "%') " +
+                    " OR (sclass = '0' OR sclass like '%," + class_id + "' or sclass like '%," + class_id + ",%' OR sclass like '" + class_id + ",%' OR sclass like '%" + class_id + "%')";
 
             dt = objDAL.ExecuteDataTable(sqlQuery);
 
@@ -289,16 +289,22 @@ namespace WebAPIMySchool.Controllers
                 List<Teacher> tmembers = new List<Teacher>();
                 List<Student> smembers = new List<Student>();
                 //get teachers
-                tmemberstring = dt.Rows[i]["tmembers"].ToString() == "" ? "0" : dt.Rows[i]["tmembers"].ToString();
-                tclassstring = dt.Rows[i]["tclass"].ToString() == "" ? "0" : dt.Rows[i]["tclass"].ToString();
+                tmemberstring = dt.Rows[i]["tmembers"].ToString() == "" ? "-1" : dt.Rows[i]["tmembers"].ToString();
+                tclassstring = dt.Rows[i]["tclass"].ToString() == "" ? "-1" : dt.Rows[i]["tclass"].ToString();
 
                 DataTable dt1 = new DataTable();
                 string sqlQuery1 = "SELECT t.id,t.code,t.name,t.mobile,t.email,t.present_address,t.permenant_address,t.status,t.qualification, t.image_path, " +
                         "dep.name as department, des.id as designation_id,des.name as designation, dep.id as department_id,t.nationality, t.school_id, " +
                         "cls.std as class_std, cls.division as class_division, cls.id as class_id " +
                         "FROM teacher t INNER JOIN department dep ON t.department_id = dep.id INNER JOIN designation des ON des.id = t.designation_id " +
-                        "INNER JOIN class cls ON cls.id = t.class_id WHERE t.id in (" + tmemberstring + ") OR class_id in (" + tclassstring + ")";
-
+                        "INNER JOIN class cls ON cls.id = t.class_id ";
+                if(tmemberstring != "0"  && tclassstring != "0")
+                    sqlQuery1 +=  " WHERE t.id in (" + tmemberstring + ") OR class_id in (" + tclassstring + ")";
+                else if (tmemberstring != "0" && tclassstring == "0")
+                    sqlQuery1 += " WHERE t.id in (" + tmemberstring + ") ";
+                else if (tmemberstring == "0" && tclassstring != "0")
+                    sqlQuery1 += " WHERE class_id in (" + tclassstring + ") ";
+                
                 dt1 = objDAL.ExecuteDataTable(sqlQuery1);
 
                 for (int j = 0; j < dt1.Rows.Count; j++)
@@ -334,7 +340,15 @@ namespace WebAPIMySchool.Controllers
                 string sqlQueryStd = "SELECT t.id,t.school_id,t.student_id,t.first_name,t.mobile,t.email,t.present_address,t.permenant_address,t.father_name, t.mother_name, " +
                         "t.contact_mobile, t.contact_email,t.gender, t.wilayath,t.waynumber,t.nationality,t.middle_name,t.family_name,t.gender,t.image_path,t.status, " +
                         "cls.id as class_id, cls.std as class_std, cls.division as class_division,t.latitude, t.longitude, t.accuracy " +
-                        " FROM student t INNER JOIN class cls ON t.class_id = cls.ID WHERE t.id in (" + smemberstring + ") OR class_id in (" + sclassstring + ")";
+                        " FROM student t INNER JOIN class cls ON t.class_id = cls.ID ";
+                if (smemberstring != "0" && sclassstring != "0")
+                    sqlQueryStd += " WHERE t.id in (" + smemberstring + ") OR class_id in (" + sclassstring + ")";
+                else if (smemberstring != "0" && sclassstring == "0")
+                    sqlQueryStd += " WHERE t.id in (" + smemberstring + ") ";
+                else if (smemberstring == "0" && sclassstring != "0")
+                    sqlQueryStd += " WHERE class_id in (" + sclassstring + ")";
+
+
                 dtStudent = objDAL.ExecuteDataTable(sqlQueryStd);
 
                 for (int k = 0; k < dtStudent.Rows.Count; k++)
@@ -471,6 +485,8 @@ namespace WebAPIMySchool.Controllers
                     updateMessage = "Please pass valid sclass (Eg : 1,3,4)";
                 else if (tclass != "" && !Regex.IsMatch(tclass, @"^[0-9]+(,[0-9]+)*$"))
                     updateMessage = "Please pass valid tclass (Eg : 1,3,4)";
+                else if(fdate == "" || tdate == "")
+                    updateMessage = "Please pass valid fdate and tdate";
                 else
                 {
                     sqlQuery = "INSERT INTO meeting(school_id, from_id, from_type, fromdate, todate, subject, message, status, smembers, tmembers, sclass, tclass) VALUES(" + school_id +
@@ -500,15 +516,30 @@ namespace WebAPIMySchool.Controllers
             DataTable APItable = new DataTable();
             DataTable fnameTable = new DataTable();
 
-            smembers = smembers == "" ? "0" : smembers;
-            tmembers = tmembers == "" ? "0" : tmembers;
-            sclass = sclass == "" ? "0" : sclass;
-            tclass = tclass == "" ? "0" : tclass;
+            smembers = smembers == "" ? "-1" : smembers;
+            tmembers = tmembers == "" ? "-1" : tmembers;
+            sclass = sclass == "" ? "-1" : sclass;
+            tclass = tclass == "" ? "-1" : tclass;
 
-            string sqlQuery = "SELECT s.email,s.class_id,l.google_regid from student s INNER JOIN class c ON s.class_id = c.id INNER JOIN login l ON l.user_id = s.id AND l.type = 4 WHERE s.class_id IN (" + sclass + ") UNION  " +
-                " SELECT t.email,t.class_id,l.google_regid FROM teacher t INNER JOIN class c ON t.class_id = c.id INNER JOIN login l ON l.user_id = t.id AND l.type = 3 WHERE t.class_id IN (" + tclass + ") UNION " +
-                " SELECT t.email,t.class_id,l.google_regid FROM teacher t INNER JOIN login l ON l.user_id = t.id AND l.type = 3 WHERE t.id IN (" + tmembers + ") UNION " +
-                " SELECT s.email,s.class_id,l.google_regid from student s INNER JOIN login l ON l.user_id = s.id AND l.type = 4 WHERE s.id IN (" + smembers + ") ";
+            //string sqlQuery = "SELECT s.email,s.class_id,l.google_regid from student s INNER JOIN class c ON s.class_id = c.id INNER JOIN login l ON l.user_id = s.id AND l.type = 4 WHERE s.class_id IN (" + sclass + ") UNION  " +
+            //    " SELECT t.email,t.class_id,l.google_regid FROM teacher t INNER JOIN class c ON t.class_id = c.id INNER JOIN login l ON l.user_id = t.id AND l.type = 3 WHERE t.class_id IN (" + tclass + ") UNION " +
+            //    " SELECT t.email,t.class_id,l.google_regid FROM teacher t INNER JOIN login l ON l.user_id = t.id AND l.type = 3 WHERE t.id IN (" + tmembers + ") UNION " +
+            //    " SELECT s.email,s.class_id,l.google_regid from student s INNER JOIN login l ON l.user_id = s.id AND l.type = 4 WHERE s.id IN (" + smembers + ") ";
+
+            string sqlQuery = "";
+            sqlQuery = "SELECT s.email,s.class_id,l.google_regid from student s INNER JOIN class c ON s.class_id = c.id INNER JOIN login l ON l.user_id = s.id AND l.type = 4 ";
+            if (sclass != "0")
+                sqlQuery += " WHERE s.class_id IN (" + sclass + ") ";
+            sqlQuery += " UNION SELECT t.email,t.class_id,l.google_regid FROM teacher t INNER JOIN class c ON t.class_id = c.id INNER JOIN login l ON l.user_id = t.id AND l.type = 3 ";
+            if (tclass != "0")
+                sqlQuery += "WHERE t.class_id IN (" + tclass + ") ";
+            sqlQuery += " UNION SELECT t.email,t.class_id,l.google_regid FROM teacher t INNER JOIN login l ON l.user_id = t.id AND l.type = 3 ";
+            if (tmembers != "0")
+                sqlQuery += " WHERE t.id IN (" + tmembers + ") ";
+            sqlQuery += " UNION  SELECT s.email,s.class_id,l.google_regid from student s INNER JOIN login l ON l.user_id = s.id AND l.type = 4 ";
+            if(smembers != "0")
+                sqlQuery += " WHERE s.id IN (" + smembers + ") ";
+
             resultTable = objDAL.ExecuteDataTable(sqlQuery);
 
             string googleSenderID = "";
@@ -560,7 +591,7 @@ namespace WebAPIMySchool.Controllers
                 string GoogleAppID = googleAPPID;
                 var SENDER_ID = senderID;
                 string devider = ":RBAIJSDUR:";
-                var value = "MT" + devider + System.DateTime.Now + devider + fname + devider + sub + devider + fdate + devider + tdate + devider + msg;
+                var value = "MT" + devider + System.DateTime.Now.ToString("yyyy-MM-dd / H:mm:ss") + devider + fname + devider + sub + devider + fdate + devider + tdate + devider + msg;
                 WebRequest tRequest;
                 tRequest = WebRequest.Create("https://android.googleapis.com/gcm/send");
                 tRequest.Method = "post";
@@ -570,7 +601,7 @@ namespace WebAPIMySchool.Controllers
                 tRequest.Headers.Add(string.Format("Sender: id={0}", SENDER_ID));
 
                 string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + value + "&data.time=" +
-                System.DateTime.Now.ToString() + "&registration_id=" + regid + "";
+                System.DateTime.Now.ToString("yyyy-MM-dd / H:mm:ss") + "&registration_id=" + regid + "";
                 Console.WriteLine(postData);
                 Byte[] byteArray = Encoding.UTF8.GetBytes(postData);
                 tRequest.ContentLength = byteArray.Length;
@@ -650,7 +681,7 @@ namespace WebAPIMySchool.Controllers
                 sqlQuery = "SELECT t.email,t.name,l.google_regid,m.subject FROM teacher t INNER JOIN meeting m ON t.id = m.from_id AND m.from_type = 3 INNER JOIN login l ON l.user_id = t.id AND l.type = 3 WHERE m.id = " + meetid;
             else if (ftype == "4")
                 sqlQuery = "SELECT s.email,CONCAT(s.first_name, ' ' , s.middle_name, ' ' , s.family_name) as name,l.google_regid,m.subject FROM student s INNER JOIN meeting m ON s.id = m.from_id AND m.from_type = 4 INNER JOIN login l ON l.user_id = t.id AND l.type = 4 WHERE m.id = " + meetid;
-            
+
             resultTable = objDAL.ExecuteDataTable(sqlQuery);
 
             string googleSenderID = "";
@@ -704,7 +735,7 @@ namespace WebAPIMySchool.Controllers
                 string GoogleAppID = googleAppID;
                 var SENDER_ID = googleSenderID;
                 string devider = ":RBAIJSDUR:";
-                var value = "MT" + devider + System.DateTime.Now + devider + fromName + devider + sub + devider + status + devider + comments;
+                var value = "MT" + devider + System.DateTime.Now.ToString("yyyy-MM-dd / H:mm:ss") + devider + fromName + devider + sub + devider + status + devider + comments;
                 WebRequest tRequest;
                 tRequest = WebRequest.Create("https://android.googleapis.com/gcm/send");
                 tRequest.Method = "post";
@@ -714,7 +745,7 @@ namespace WebAPIMySchool.Controllers
                 tRequest.Headers.Add(string.Format("Sender: id={0}", SENDER_ID));
 
                 string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + value + "&data.time=" +
-                System.DateTime.Now.ToString() + "&registration_id=" + regid + "";
+                System.DateTime.Now.ToString("yyyy-MM-dd / H:mm:ss") + "&registration_id=" + regid + "";
                 Console.WriteLine(postData);
                 Byte[] byteArray = Encoding.UTF8.GetBytes(postData);
                 tRequest.ContentLength = byteArray.Length;
@@ -744,17 +775,5 @@ namespace WebAPIMySchool.Controllers
             }
         }
 
-        private void testPost()
-        {
-
-        }
-
-        //public MeetingHeader getMymeeting(string scid, string fid, string ftype)
-        //{
-
-        //}
-
-
-        //api/meetingUpdate?school_id=1&meetingid=1&comment=testcomment&toIDs={All ids participating this meeting}&Status={APPROVE,DELETE,DENEY}&fromID=1
     }
 }

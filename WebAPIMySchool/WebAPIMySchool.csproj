@@ -235,6 +235,7 @@
     <Compile Include="Models\Holiday.cs" />
     <Compile Include="Models\Login.cs" />
     <Compile Include="Models\Meeting.cs" />
+    <Compile Include="Models\Notification.cs" />
     <Compile Include="Models\Product.cs" />
     <Compile Include="Models\School.cs" />
     <Compile Include="Models\Student.cs" />
