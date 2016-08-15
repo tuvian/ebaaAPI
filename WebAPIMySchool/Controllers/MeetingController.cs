@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 using System.Web.Http;
 using WebAPIMySchool.Models;
 
@@ -600,7 +601,7 @@ namespace WebAPIMySchool.Controllers
 
                 tRequest.Headers.Add(string.Format("Sender: id={0}", SENDER_ID));
 
-                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + value + "&data.time=" +
+                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + HttpUtility.UrlEncode(value) + "&data.time=" +
                 System.DateTime.Now.ToString("yyyy-MM-dd / H:mm:ss") + "&registration_id=" + regid + "";
                 Console.WriteLine(postData);
                 Byte[] byteArray = Encoding.UTF8.GetBytes(postData);
@@ -744,7 +745,7 @@ namespace WebAPIMySchool.Controllers
 
                 tRequest.Headers.Add(string.Format("Sender: id={0}", SENDER_ID));
 
-                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + value + "&data.time=" +
+                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + HttpUtility.UrlEncode(value) + "&data.time=" +
                 System.DateTime.Now.ToString("yyyy-MM-dd / H:mm:ss") + "&registration_id=" + regid + "";
                 Console.WriteLine(postData);
                 Byte[] byteArray = Encoding.UTF8.GetBytes(postData);

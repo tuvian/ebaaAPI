@@ -38,7 +38,7 @@ namespace WebAPIMySchool.Controllers
 
         private void userLogin(string username, string password, string schoolid, string deviceid)
         {
-            if (deviceid == null || schoolid == null )
+            if (deviceid == null || schoolid == null)
             {
                 login.loginMessage = "Please provide valid device ID/School ID";
                 return;
@@ -261,11 +261,29 @@ namespace WebAPIMySchool.Controllers
                     "dep.name as department, des.id as designation_id,des.name as designation, dep.id as department_id,t.nationality, t.school_id, " +
                     "cls.std as class_std, cls.division as class_division, cls.id as class_id " +
                     "FROM teacher t INNER JOIN department dep ON t.department_id = dep.id INNER JOIN designation des ON des.id = t.designation_id " +
-                    "INNER JOIN class cls ON cls.id = t.class_id ";
+                //"INNER JOIN class cls ON cls.id = t.class_id ";
+                    "LEFT JOIN teacher_class tc ON tc.teacher_id = t.id  LEFT JOIN class cls ON cls.id = tc.class_id ORDER BY id;";
             dt = objDAL.ExecuteDataTable(sqlQuery);
 
+            //DataTable dtSub = dt.Copy();
+            string teacherID = "";
             for (int i = 0; i < dt.Rows.Count; i++)
             {
+                teacherID = dt.Rows[i]["ID"].ToString();
+                DataRow[] assignedClasses;
+                assignedClasses = dt.Select("id=" + teacherID);
+                IList<Class> a_classes = new List<Class>();
+                for (int j = 0; j < assignedClasses.Length; j++)
+                {
+                    a_classes.Add(new Class
+                        {
+                            ID = assignedClasses[j]["class_id"].ToString(),
+                            division = assignedClasses[j]["class_division"].ToString(),
+                            std = assignedClasses[j]["class_std"].ToString(),
+                            school_id = assignedClasses[j]["school_id"].ToString(),
+                            status = assignedClasses[j]["status"].ToString()
+                        });
+                }
                 teachers.Add(new Teacher
                 {
                     ID = dt.Rows[i]["ID"].ToString(),
@@ -283,11 +301,11 @@ namespace WebAPIMySchool.Controllers
                     school_id = dt.Rows[i]["school_id"].ToString(),
                     department = dt.Rows[i]["department"].ToString(),
                     designation = dt.Rows[i]["designation"].ToString(),
-                    class_id = dt.Rows[i]["class_id"].ToString(),
-                    class_division = dt.Rows[i]["class_division"].ToString(),
-                    class_std = dt.Rows[i]["class_std"].ToString(),
-
-                });
+                    //class_id = dt.Rows[i]["class_id"].ToString(),
+                    //class_division = dt.Rows[i]["class_division"].ToString(),
+                    //class_std = dt.Rows[i]["class_std"].ToString(),
+                    assignedClasses = a_classes
+                });                
             }
         }
 

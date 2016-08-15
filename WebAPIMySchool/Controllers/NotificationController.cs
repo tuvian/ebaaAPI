@@ -271,7 +271,7 @@ namespace WebAPIMySchool.Controllers
 
                 tRequest.Headers.Add(string.Format("Sender: id={0}", SENDER_ID));
 
-                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + value + "&data.time=" +
+                string postData = "collapse_key=score_update&time_to_live=108&delay_while_idle=1&data.message=" + HttpUtility.UrlEncode(value) + "&data.time=" +
                 System.DateTime.Now.ToString("yyyy-MM-dd / H:mm:ss") + "&registration_id=" + regid + "";
                 Console.WriteLine(postData);
                 Byte[] byteArray = Encoding.UTF8.GetBytes(postData);
@@ -323,7 +323,7 @@ namespace WebAPIMySchool.Controllers
             int.TryParse(pn.fid, out from_id);
             if (pn.ftype != "1" || pn.ftype != "2" || pn.ftype != "3" || pn.ftype != "4")
             {
-                ap.api_status = "Please pass valid ftype";
+                ap.api_status = "Please pass valid ftype, ftype : " + pn.ftype;
                 return ap;
             }
             if (school_id == 0 || from_id == 0)
@@ -373,7 +373,7 @@ namespace WebAPIMySchool.Controllers
             }
             catch (Exception ex)
             {
-                ap.api_status = "Faliure : " + ex.Message;
+                ap.api_status = "Faliure : " + ex.Message + " : ftype" + pn.ftype + " fid" + pn.fid;
             }
 
             //ap.api_status = "ID = " + sp.id + " schoolid = " + sp.school_id + " Image Status = " + base64Status;
